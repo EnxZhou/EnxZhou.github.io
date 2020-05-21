@@ -152,19 +152,19 @@
           <div id="js-content" class="content-ll">
             
   
-    <article id="post-new-one" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+    <article id="post-docker清理日志" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <header class="article-header">
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2020/05/19/new-one/">new one</a>
+      <a class="article-title" href="/2020/05/19/docker%E6%B8%85%E7%90%86%E6%97%A5%E5%BF%97/">docker清理日志</a>
     </h1>
   
 
         
-        <a href="/2020/05/19/new-one/" class="archive-article-date">
+        <a href="/2020/05/19/docker%E6%B8%85%E7%90%86%E6%97%A5%E5%BF%97/" class="archive-article-date">
   	<time datetime="2020-05-19T14:14:34.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2020-05-19</time>
 </a>
         
@@ -172,7 +172,22 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        
+        <h1 id="docker清理日志"><a href="#docker清理日志" class="headerlink" title="docker清理日志"></a>docker清理日志</h1><hr>
+<h2 id="发现服务器空间不够"><a href="#发现服务器空间不够" class="headerlink" title="发现服务器空间不够"></a>发现服务器空间不够</h2><p>今天通过Gitlab CI部署后端服务时，出现卡死，Gitlab也打不开了。<br>进入服务器发现Gitlab runner的容器一直再运行，打开容器日志显示空间不够，运行df命令查看空间。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">df -h</span><br></pre></td></tr></table></figure>
+<p>发现系统根文件已经占用了100%，仅剩余43M空间。<br>不断追踪使用df命令，还可以使用</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">du -sh*</span><br></pre></td></tr></table></figure>
+<p>发现<code>/var/lib/docker/comtainners</code>中有一个文件占了24G的空间，根据container的名称，发现是Gitlab的container。<br>大文件名为’6f60a89f274d51e7482340a9725207a0f5057ce75c673db93b540da16627243c_json.log’，是docker的容器日志文件，一个文件就有24G。</p>
+<h2 id="清理docker容器日志1"><a href="#清理docker容器日志1" class="headerlink" title="清理docker容器日志1"></a>清理docker容器日志<a href="https://blog.csdn.net/yjk13703623757/article/details/80283729" target="_blank" rel="noopener">1</a></h2><h3 id="rm-删除日志文件"><a href="#rm-删除日志文件" class="headerlink" title="rm 删除日志文件"></a>rm 删除日志文件</h3><p>如果docker容器正在运行，那么使用rm -rf方式删除日志后，通过df -h会发现磁盘空间并没有释放。<br>原因是在Linux或者Unix系统中，通过rm -rf或者文件管理器删除文件，将会从文件系统的目录结构上解除链接（unlink）。<br>如果文件是被打开的（有一个进程正在使用），那么进程将仍然可以读取该文件，磁盘空间也一直被占用。<br>如果要采用rm -rf 命令，需要重启docker。</p>
+<h3 id="直接删除日志文件内容"><a href="#直接删除日志文件内容" class="headerlink" title="直接删除日志文件内容"></a>直接删除日志文件内容</h3><p>直接删除日志中的内容，可用如下命令</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /dev/null &gt; *_json.log</span><br></pre></td></tr></table></figure>
+<p>写入后，空间被释放了。</p>
+<h2 id="提前设置容器日志大小"><a href="#提前设置容器日志大小" class="headerlink" title="提前设置容器日志大小"></a>提前设置容器日志大小</h2><p>在docker-compose的配置文件中，加上日志的大小限制，例如：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">nginx: </span><br><span class="line">  image: nginx:1.12.1 </span><br><span class="line">  restart: always </span><br><span class="line">  logging: </span><br><span class="line">    driver: “json-file” </span><br><span class="line">    options: </span><br><span class="line">      max-size: “5g”</span><br></pre></td></tr></table></figure>
+<p>这样就给该容器的日志文件做了5G大小的限制。</p>
+<hr>
+<p>作者 <a href="https://enxzhou.github.io" target="_blank" rel="noopener">EnxZhou</a></p>
+
       
 
       
@@ -184,7 +199,7 @@
 
       
         <p class="article-more-link">
-          <a class="article-more-a" href="/2020/05/19/new-one/">展开全文 >></a>
+          <a class="article-more-a" href="/2020/05/19/docker%E6%B8%85%E7%90%86%E6%97%A5%E5%BF%97/">展开全文 >></a>
         </p>
       
 
